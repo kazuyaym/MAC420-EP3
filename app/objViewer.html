@@ -1,0 +1,183 @@
+<!--...............................-->
+<!--                               -->
+<!--   Marcos Kazuya Yamazaki      -->
+<!--   NUSP: 7577622               -->
+<!--   EP2 - MAC420 Comp Grafica   -->
+<!--                               -->
+<!--...............................--> 
+
+<!DOCTYPE html>
+
+<style>
+h4.rag1 { visibility: hidden }
+h4.bpl1 { visibility: visible }
+h4.rag2 { visibility: hidden }
+h4.bpl2 { visibility: visible }
+</style>
+
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Simple OBJ Viewer</title>
+    </head>
+
+    <script id="vertex-shader" type="x-shader/x-vertex">
+    attribute  vec4 vPosition;
+    attribute  vec4 vNormal;
+    varying vec4 fColor;
+
+    uniform vec4 ambientProduct; 
+    uniform vec4 diffuseProduct;
+    uniform vec4 specularProduct;
+    uniform float shininess;
+
+    uniform mat4 modelViewMatrix;
+    uniform mat4 projectionMatrix;
+    uniform mat4 m1; // se for identidade, quer dizer que queremos usar a iluminacao
+    uniform mat4 m2; // se essa for identidade, quer dizer que queremos usar as cores dadas pelo vNormal
+
+    uniform vec4 lightPosition;
+
+    void main()
+    {
+        vec3 pos = -(modelViewMatrix * vPosition).xyz;
+
+        // fixed light postion
+        vec3 light = lightPosition.xyz;
+        vec3 L = normalize( light - pos );
+
+        vec3 E = normalize( -pos );
+        vec3 H = normalize( L + E );
+
+        // transform vertex normal into eye coordinates
+        vec3 N = normalize( (modelViewMatrix * vNormal).xyz );
+
+        // compute terms in the illumination equation
+        vec4 ambient = ambientProduct;
+
+        float Kd = max( dot(L, N), 0.0 );
+        vec4  diffuse = Kd * diffuseProduct;
+
+        float Ks = pow( max(dot(N, H), 0.0), shininess );
+        vec4  specular = Ks * specularProduct;
+        
+        if ( dot(L, N) < 0.0 ) {
+    	   specular = vec4(0.0, 0.0, 0.0, 1.0);
+        } 
+
+        gl_Position = projectionMatrix * modelViewMatrix * vPosition;
+        
+        fColor = m1 * (ambient + diffuse + specular) + m2 * vNormal;
+        
+        fColor.a = 1.0;
+    }
+    </script>
+
+    <script id="fragment-shader" type="x-shader/x-fragment">
+
+    #ifdef GL_ES
+    precision highp float;
+    #endif
+
+    precision mediump float;
+
+    varying vec4 fColor;
+
+    void main()
+    {
+        gl_FragColor = fColor;
+    }
+    </script>
+
+    <script type="text/javascript" src="../Common/webgl-utils.js"></script>
+    <script type="text/javascript" src="../Common/initShaders.js"></script>
+    <script type="text/javascript" src="../Common/MV.js"></script>
+
+
+    <script type="text/javascript" src="objViewer.js"></script>
+    <script type="text/javascript" src="mouseKeyboard.js"></script>
+    <script type="text/javascript" src="coordenadasBarricentricas.js"></script>
+
+    <script type="text/javascript" src="CLASSpoint.js"></script>
+    <script type="text/javascript" src="CLASSsegmento.js"></script>
+    <script type="text/javascript" src="CLASSlayer.js"></script>
+    <script type="text/javascript" src="CLASSdesenho3D.js"></script>
+    <script type="text/javascript" src="CLASStrackball.js"></script>
+
+    <body>
+        <table>
+            <tr>
+                <th>
+                    <p>
+                        <canvas id="gl-canvas-1" width="512" height="512">
+                            Oops ... your browser doesn't support the HTML5 canvas element
+                        </canvas>
+                    </p>
+                </th>
+                <th>
+                    <p>
+                        <canvas id="gl-canvas-2" width="512" height="512">
+                            Oops ... your browser doesn't support the HTML5 canvas element
+                        </canvas>
+                    </p>
+                </th>
+                <th>
+                    <p>
+                        <canvas id="gl-canvas-3" width="512" height="512">
+                            Oops ... your browser doesn't support the HTML5 canvas element
+                        </canvas>
+                    </p>
+                </th>
+            </tr>
+            <tr>
+                <th>
+                    <form>
+                        <h3>
+                            Número de pontos de controle:
+                            <input id="numP1" type="number" name="numero1" value="5" min="2" max="999">
+                            <br>
+                            <input id="1a" type="radio" name="tipo1" value="r"> RaG
+                            <br>
+                            <input id="1b" type="radio" name="tipo1" value="b" checked> B-Spline
+                        </h3>
+                        <h4 id="rag1" class="rag1">
+                            RaG:
+                            <input type="number" name="desvio1" min="0" max="1" step="0.1" value="0.5"> desvio padrão.
+                        </h4>
+                        <h4 id="bpl1" class="bpl1">
+                            B-Spline:
+                            <input id="grau1" type="number" name="grau1" min="1" max="100" step="1" value="2"> grau do polinomio.
+                        </h4>
+                    </form>
+                    <button id = "del1">Deletar Ultimo Ponto</button>
+                    <button id = "limpar1">Limpar canvas</button>       
+                </th>
+                <th>
+                    <form>
+                        <h3>
+                            Número de pontos de controle:
+                            <input id="numP2" type="number" name="numero2" value="5" min="1" max="999">
+                            <br>
+                            <input id="2a" type="radio" name="tipo2" value="r"> RaG
+                            <br>
+                            <input id="2b" type="radio" name="tipo2" value="b" checked> B-Spline
+                        </h3>
+                        <h4 id="rag2" class="rag2">
+                            RaG:
+                            <input type="number" name="desvio2" min="0" max="1" step="0.1" value="0.5"> desvio padrão.
+                        </h4>
+                        <h4 id="bpl2" class="bpl2">
+                            B-Spline:
+                            <input id="grau2" type="number" name="grau2" min="1" max="100" step="1" value="2"> grau do polinomio.
+                        </h4>
+                    </form> 
+                    <button id = "del2">Deletar Ultimo Ponto</button>
+                    <button id = "limpar2">Limpar canvas</button>
+                </th>
+                <th>
+                    <input type="checkbox" id="realTime" value="yup" checked> Mudança em tempo real (Pode ser lento!)   
+                </th>
+            </tr>
+        </table>
+    </body>
+</html>
